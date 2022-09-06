@@ -1,5 +1,7 @@
-use std::io::ErrorKind;
-use crate::activation_function::ActivationFn;
+use std::{io::ErrorKind, fmt::Display};
+use itertools::izip;
+
+use crate::activation_function::{ActivationFn, ActivationFunction};
 
 pub struct NeuralLayer {
     //The size of the input vector this layer accepts, and size of output layer this layer calculates
@@ -17,17 +19,17 @@ pub struct NeuralLayer {
 }
 
 impl NeuralLayer {
-    pub fn new(input_size: usize, output_size: usize, activation_fn: ActivationFn) -> NeuralLayer {
+    pub fn new(input_size: usize, output_size: usize, activation_fn: ActivationFunction) -> NeuralLayer {
         let weights = vec![vec![0f32; input_size]; output_size];
         let biases = vec![0f32; output_size];
-        let cost_gradient_weight: Vec<Vec<f32>> = vec![Vec::with_capacity(input_size); output_size];
-        let cost_gradient_bias: Vec<f32> = Vec::with_capacity(output_size);
+        let cost_gradient_weight = vec![vec![0f32; input_size]; output_size];
+        let cost_gradient_bias = vec![0f32; output_size];
         NeuralLayer {
             input_size,
             output_size,
             weights,
             biases,
-            activation_fn,
+            activation_fn: activation_fn.this(),
             cost_gradient_weight,
             cost_gradient_bias,
         }
@@ -55,6 +57,10 @@ impl NeuralLayer {
         }
     }
 
+    pub fn len(&self) -> usize {
+        self.output_size
+    }
+
     fn neuron_cost_derivative(activation: &f32, result: &f32) -> f32 {
         2f32 * (activation - result)
     }
@@ -63,7 +69,7 @@ impl NeuralLayer {
         -> Result<Vec<f32>, ErrorKind> {
         let mut new_training_vector = Vec::with_capacity(self.output_size);
         
-        for new_index in 0..new_training_vector.len() {
+        for new_index in 0..self.output_size {
             let mut new_training_gradient = 0f32;
             for prior_index in 0..prior_training_vector.len() {
                 let derivative_weighted_input = prior_layer.weights.get(prior_index).unwrap().get(new_index).unwrap();
@@ -93,11 +99,11 @@ impl NeuralLayer {
         Ok(training_vector)
     }
 
-    pub(crate) fn update_gradients(&mut self, y: &Vec<f32>, memory: &Vec<(f32, f32)>) {
+    pub(crate) fn update_gradients(&mut self, training_vector: &Vec<f32>, memory: &Vec<(f32, f32)>) {
         for output_index in 0..self.output_size {
-            let training_gradient = y.get(output_index).unwrap();
+            let training_gradient = training_vector.get(output_index).unwrap();
             for input_index in 0..self.input_size {
-                let memory_weighted_input = memory.get(input_index).unwrap().1;
+                let memory_weighted_input = memory.get(output_index).unwrap().1;
                 let derivative_cost_wrt_weight = memory_weighted_input * training_gradient;
                 let variable_to_update = self.cost_gradient_weight
                     .get_mut(output_index)
@@ -124,7 +130,27 @@ impl NeuralLayer {
     }
 
     pub fn clear_gradient(&mut self) {
-        self.cost_gradient_weight = vec![Vec::with_capacity(self.input_size); self.output_size];
-        self.cost_gradient_bias = Vec::with_capacity(self.output_size);
+        self.cost_gradient_weight = vec![vec![0f32; self.input_size]; self.output_size];
+        self.cost_gradient_bias = vec![0f32; self.output_size]
+    }
+}
+
+impl Display for NeuralLayer {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut fns_string = String::new();
+
+        for (ws, b) in izip!(&self.weights, &self.biases).peekable() {
+            let w_string = {
+                let mut w_str = "[ ".to_string();
+                for w in ws {
+                    w_str.push_str(&format!("{:.3}, ", w));
+                }
+                w_str.push_str("]");
+                w_str
+            };
+            fns_string.push_str(&format!("{}x+{:.3}", w_string, b));
+        }
+
+        write!(f, "[{fns_string}]")
     }
 }

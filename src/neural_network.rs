@@ -1,7 +1,8 @@
+use std::fmt::Display;
 use std::io::ErrorKind;
-use std::thread::current;
+use itertools::izip;
 use crate::neural_layer::NeuralLayer;
-use crate::activation_function::ActivationFn;
+use crate::activation_function::ActivationFunction;
 
 type DataPoint = Vec<f32>;
 type DataPair<'a> = &'a (DataPoint, DataPoint);
@@ -12,19 +13,18 @@ pub struct NeuralNetwork {
 }
 
 impl NeuralNetwork {
-    pub fn new(layer_sizes: Vec<usize>, activation_fns: Vec<ActivationFn>) -> Result<NeuralNetwork, ErrorKind> {
+    pub fn new(layer_sizes: &Vec<usize>, activation_fns: &Vec<ActivationFunction>) -> Result<NeuralNetwork, ErrorKind> {
         let length = layer_sizes.len();
         if length == 0 {
             Err(ErrorKind::InvalidInput)
         } else {
             let mut layers: Vec<NeuralLayer> = Vec::with_capacity(length);
-            for n in 0..length-1 {
-                let input_size = layer_sizes.get(n).unwrap();
-                let output_size = layer_sizes.get(n+1).unwrap();
-                let activation_fn = activation_fns.get(n).unwrap();
+
+            for (input_size, output_size, activation_fn) in izip!(layer_sizes, layer_sizes.iter().skip(1), activation_fns) {
                 let new_layer = NeuralLayer::new(*input_size, *output_size, *activation_fn);
                 layers.push(new_layer);
             }
+            
             Ok(NeuralNetwork {layers})
         }
     }
@@ -76,7 +76,6 @@ impl NeuralNetwork {
     }
 
     pub fn cost (&self, test_data: DataCollection) -> Result<f32, ErrorKind> {
-        let data_len = test_data.len();
         let mut running_cost = 0f32;
 
         for (x, y) in test_data {
@@ -86,7 +85,7 @@ impl NeuralNetwork {
         Ok(running_cost)
     }
 
-    fn update_gradients_every_layer(&mut self, (x, y): DataPair) {
+    fn update_all_gradients(&mut self, (x, y): DataPair) {
         let entire_history = self.evaluate_with_memory(x).unwrap();
 
         let final_layer_ref = self.layers_mut().last_mut();
@@ -128,7 +127,7 @@ impl NeuralNetwork {
 
     pub fn learn(&mut self, training_data: &Vec<(DataPoint, DataPoint)>, training_rate: &f32) {
         for data in training_data {
-            self.update_gradients_every_layer(data);
+            self.update_all_gradients(data);
         }
 
         //Apply all gradients to weights and biases
@@ -136,6 +135,19 @@ impl NeuralNetwork {
 
         //Clear out gradients for next training session
         self.clear_all_gradients();
+    }
+}
+
+impl Display for NeuralNetwork {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut output = String::new();
+        let mut iter = self.layers.iter().peekable();
+        for layer in iter {
+            let s = format!("{};  ", &layer.to_string());
+            output.push_str(&s);
+        }
+        write!(f, "{}", output)
+        
     }
 }
 
