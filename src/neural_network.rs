@@ -101,6 +101,7 @@ impl NeuralNetwork {
         for current_index in (0..self.layers.len() - 1).rev() {
             let layers_mut = self.layers_mut();
             let current_memory = entire_history.get(current_index).unwrap();
+
             //to avoid memory issues we use split_at_mut's unsafe code to solve this issue by generating new lists of references shared with original list
             //terrible hacky attempt at fix starts
             let (_, hidden_to_final_list) = layers_mut.split_at_mut(current_index);
@@ -108,6 +109,7 @@ impl NeuralNetwork {
             let hidden_layer = exactly_hidden_list.get_mut(0).unwrap();
             let prior_layer = prior_to_final_list.get_mut(0).unwrap();
             //terrible hacky attempt at fix ends
+            
             let new_training_vector = hidden_layer.calculate_hidden_layer_training_vector(&prior_layer, &training_vector, current_memory).unwrap();
             hidden_layer.update_gradients(&new_training_vector, current_memory);
         }
@@ -141,7 +143,7 @@ impl NeuralNetwork {
 impl Display for NeuralNetwork {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut output = String::new();
-        let mut iter = self.layers.iter().peekable();
+        let iter = self.layers.iter().peekable();
         for layer in iter {
             let s = format!("{};  ", &layer.to_string());
             output.push_str(&s);
@@ -153,7 +155,7 @@ impl Display for NeuralNetwork {
 
 #[cfg(test)]
 mod test {
-    use crate::*;
+    use crate::NeuralNetwork;
 
     #[test]
     fn test_sqrd_distance() {

@@ -16,9 +16,8 @@ fn main() {
         (vec![0f32, 3f32], vec![0f32, 1f32]),
     ]; // maps (x, y) to (x, 1)
 
-    for x in 0..10 {
+    for _ in 0..10 {
         let cost = my_neural_network.cost(&data).unwrap();
-        println!("{}", my_neural_network);
         println!("Cost: {}\n", cost);
         my_neural_network.learn(&data, &0.01);
     }

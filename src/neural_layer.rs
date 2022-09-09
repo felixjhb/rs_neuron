@@ -57,10 +57,6 @@ impl NeuralLayer {
         }
     }
 
-    pub fn len(&self) -> usize {
-        self.output_size
-    }
-
     fn neuron_cost_derivative(activation: &f32, result: &f32) -> f32 {
         2f32 * (activation - result)
     }
@@ -105,12 +101,12 @@ impl NeuralLayer {
             for input_index in 0..self.input_size {
                 let memory_weighted_input = memory.get(output_index).unwrap().1;
                 let derivative_cost_wrt_weight = memory_weighted_input * training_gradient;
-                let variable_to_update = self.cost_gradient_weight
+                let specific_weight_gradient = self.cost_gradient_weight
                     .get_mut(output_index)
                     .unwrap()
                     .get_mut(input_index)
                     .unwrap();
-                *variable_to_update += derivative_cost_wrt_weight;
+                *specific_weight_gradient += derivative_cost_wrt_weight;
             }
 
             let derivative_cost_wrt_bias = 1f32 * training_gradient;
@@ -119,12 +115,10 @@ impl NeuralLayer {
     }
 
     pub(crate) fn apply_gradient(&mut self, training_rate: &f32) {
-        for (weight_vector, (bias, (weight_gradient_vector, bias_gradient))) in 
-            self.weights.iter_mut().zip(self.biases.iter_mut().zip(self.cost_gradient_weight.iter_mut().zip(self.cost_gradient_bias.iter_mut())))
-        {
+        for (weight_vector, bias, weight_gradient_vector, bias_gradient) in izip!(self.weights.iter_mut(), self.biases.iter_mut(), &self.cost_gradient_weight, &self.cost_gradient_bias) {
             *bias += *bias_gradient * training_rate;
-            for (weight, weight_gradient) in weight_vector.iter_mut().zip(weight_gradient_vector.iter_mut()) {
-                *weight += *weight_gradient * training_rate;
+            for (weight, weight_gradient) in izip!(weight_vector.iter_mut(), weight_gradient_vector) {
+                *weight += weight_gradient * training_rate;
             }
         }
     }

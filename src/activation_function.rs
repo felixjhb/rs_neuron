@@ -1,5 +1,3 @@
-use std::fmt::Display;
-
 use libm::{expf, sinf, cosf};
 
 #[derive(Copy, Clone)]
@@ -22,6 +20,7 @@ impl ActivationFn {
     }
 }
 
+#[allow(dead_code)]
 #[derive(Copy, Clone)]
 pub enum ActivationFunction {
     Identity,
@@ -32,7 +31,7 @@ pub enum ActivationFunction {
 }
 
 impl ActivationFunction {
-    pub fn this(&self) -> ActivationFn {
+    pub(crate) fn this(&self) -> ActivationFn {
         match self {
             ActivationFunction::Identity => 
                 ActivationFn::new(|x| x, |_| 1f32),
@@ -53,21 +52,3 @@ impl Default for ActivationFunction {
         ActivationFunction::Identity
     }
 }
-
-// impl Display for ActivationFunction {
-//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-//         write!(f, "f(x) = {}", match self {
-//             ActivationFunction::Identity => 
-//                 "x",
-//             ActivationFunction::Step => 
-//                 "x < 0 ? 0 : 1",
-//             ActivationFunction::InvExp => 
-//                 "1/(1+exp(x))",
-//             ActivationFunction::Sine =>
-//                 "sin(x)",
-//             ActivationFunction::Custom(_, _) =>
-//                 "Custom",
-//             }
-//         )
-//     }
-// }
